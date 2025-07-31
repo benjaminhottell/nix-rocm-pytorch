@@ -13,13 +13,25 @@ pkgs ? import <nixpkgs> {
 
 let
 
+  pytorch-src-rev = "v2.7.1";
+
+  # Latest versions at time of writing this file
+
   mkl-static = pkgs.callPackage ./mkl-static-2025_2_0.nix { inherit pkgs; };
 
   mkl-include = pkgs.callPackage ./mkl-include-2025_2_0.nix { inherit pkgs; };
 
   openblas = pkgs.callPackage ./openblas-0_3_30.nix { inherit pkgs; };
 
+  # Version specified in requirements file
+
   setuptools = pkgs.callPackage ./setuptools-79_0_1.nix { inherit pkgs; };
+
+  # Versions observed in submodules in third_party/
+
+  xnnpack = pkgs.callPackage ./xnnpack-51a0103.nix { inherit pkgs; };
+
+  cpuinfo = pkgs.callPackage ./cpuinfo-1e83a2f.nix { inherit pkgs; };
 
 
   # Pytorch is expecting a path like /opt/rocm with many packages installed there
@@ -120,7 +132,7 @@ let
   pytorch-src = pkgs.fetchFromGitHub {
     owner = "pytorch";
     repo = "pytorch";
-    rev = "v2.7.1";
+    rev = pytorch-src-rev;
     fetchSubmodules = true;
     hash = "sha256-wVzYx8YYoL8rVYb9DwF6ai16UzPvSO4WhNvddh09RXM=";
   };
@@ -137,7 +149,7 @@ let
   pytorch-rocm = pkgs.stdenv.mkDerivation {
 
     name = "pytorch";
-    version = "2.7.1";
+    version = pytorch-src-rev;
     src = pytorch-src;
 
     nativeBuildInputs = [
@@ -152,6 +164,7 @@ let
     propagatedBuildInputs = [
       pytorch-rocmpath
       openblas
+      xnnpack
       pkgs.protobuf
     ];
 
@@ -169,6 +182,13 @@ let
         --replace-fail 'case cuda::_set_device:' '// case cuda::set_device:' \
         --replace-fail 'case cuda::_current_device:' '// case cuda::current_device:' \
         --replace-fail 'case cuda::synchronize:' '// case cuda::synchronize:'
+
+      # https://github.com/pytorch/pytorch/pull/159527
+      substituteInPlace \
+        cmake/Dependencies.cmake \
+        --replace-fail \
+          'if(NOT XNNPACK_LIBRARY or NOT microkernels-prod_LIBRARY)' \
+          'if(NOT XNNPACK_LIBRARY OR NOT microkernels-prod_LIBRARY)'
 
     '';
 
@@ -194,6 +214,7 @@ let
       export USE_NNPACK=OFF
       export USE_GLOO=OFF
       export USE_NCCL=OFF
+      export USE_SYSTEM_XNNPACK=ON
 
       # Pytorch tries to clone nccl even though we don't want it.
       # Here, we lie to pytorch :)
