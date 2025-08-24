@@ -12,7 +12,7 @@
 
 let
 
-  rocm-pytorch = pkgs.callPackage ./derivations/pytorch-rocm-2_7_1.nix {};
+  rocm-pytorch = pkgs.callPackage ./derivations/pytorch-rocm-2_8_0.nix {};
 
   shell = pkgs.mkShell {
 
@@ -50,7 +50,6 @@ let
     '';
 
   };
-
 
 in
   shell

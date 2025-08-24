@@ -5,6 +5,8 @@
 
 import torch
 
+print('torch.__version__', torch.__version__)
+
 print('Cuda is avilable:', torch.cuda.is_available())
 
 print('Cuda devices:', torch.cuda.device_count())
